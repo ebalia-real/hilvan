@@ -8,6 +8,12 @@ import (
 	"golang.org/x/image/draw"
 )
 
+// Pixmap es un ícono ARGB32 en orden de red, como lo pide la especificación.
+type Pixmap struct {
+	W, H int32
+	Data []byte
+}
+
 // Render escala el ícono a size×size y, si badge, le agrega el punto rojo de "sin leer"
 // arriba a la derecha (con un borde transparente para que se distinga sobre cualquier fondo).
 func Render(src image.Image, size int, badge bool) *image.NRGBA {

@@ -24,12 +24,6 @@ const (
 	watcherPath = dbus.ObjectPath("/StatusNotifierWatcher")
 )
 
-// Pixmap es un ícono ARGB32 en orden de red, como lo pide la especificación.
-type Pixmap struct {
-	W, H int32
-	Data []byte
-}
-
 type toolTip struct {
 	Icon  string
 	Image []Pixmap
