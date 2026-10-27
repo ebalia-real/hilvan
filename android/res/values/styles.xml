@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="hv_bg">#141519</color>
+    <color name="hv_accent">#6D5DFC</color>
+    <style name="Hilvan" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/hv_bg</item>
+        <item name="android:colorAccent">@color/hv_accent</item>
+        <item name="android:statusBarColor">@color/hv_bg</item>
+        <item name="android:navigationBarColor">@color/hv_bg</item>
+    </style>
+</resources>

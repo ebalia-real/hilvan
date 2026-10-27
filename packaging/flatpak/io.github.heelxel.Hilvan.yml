@@ -1,0 +1,49 @@
+# Flatpak de Hilvan: funciona en cualquier distribución de Linux con Flatpak.
+# El flujo de publicación reemplaza @VERSION@ y genera vendor/ (sin red durante la compilación).
+app-id: io.github.heelxel.Hilvan
+runtime: org.gnome.Platform
+runtime-version: "50"
+sdk: org.gnome.Sdk
+command: hilvan
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --socket=pulseaudio
+  - --device=all
+  - --filesystem=xdg-download
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+  - --talk-name=org.kde.StatusNotifierWatcher
+  - --own-name=org.kde.StatusNotifierItem-*
+  # Solo para que el actualizador pueda instalar la versión nueva del paquete.
+  - --talk-name=org.freedesktop.Flatpak
+modules:
+  - name: hilvan
+    buildsystem: simple
+    build-options:
+      env:
+        CGO_ENABLED: "1"
+        GOFLAGS: -mod=vendor
+        GOTOOLCHAIN: local
+        GOCACHE: /run/build/hilvan/.cache
+    build-commands:
+      - PATH=$PWD/go/bin:$PATH go build -trimpath -tags goolm,sqlite_fts5 -ldflags "-s -w -X main.version=@VERSION@ -X main.packaging=flatpak" -o /app/bin/hilvan ./cmd/hilvan
+      - install -Dm644 assets/io.github.heelxel.Hilvan.desktop /app/share/applications/io.github.heelxel.Hilvan.desktop
+      - install -Dm644 assets/logo.svg /app/share/icons/hicolor/scalable/apps/io.github.heelxel.Hilvan.svg
+      - for s in 16 32 48 64 128 256 512; do install -Dm644 assets/icons/hilvan-$s.png /app/share/icons/hicolor/${s}x${s}/apps/io.github.heelxel.Hilvan.png; done
+    sources:
+      - type: dir
+        path: ../..
+        skip: [ .git, android, packaging/flatpak/build, packaging/flatpak/repo ]
+      - type: archive
+        url: https://go.dev/dl/go1.26.10.linux-amd64.tar.gz
+        sha256: ccfe7ae822d2c2f41f4fe7c956199967a4dac22d0ee0d2b2bfdb440aab3b20c5
+        dest: go
+        only-arches: [ x86_64 ]
+      - type: archive
+        url: https://go.dev/dl/go1.26.10.linux-arm64.tar.gz
+        sha256: 3f4227ce7b206a513e794f1393adb473a07b46e94d18bd15d1c684bbb7319797
+        dest: go
+        only-arches: [ aarch64 ]

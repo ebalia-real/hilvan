@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Hilvan
+GenericName=Chat Matrix
+GenericName[en]=Matrix chat
+Comment=Mensajería segura, minimalista y rápida para Matrix y otras redes
+Comment[en]=Secure, minimal and fast messaging for Matrix and bridged networks
+Exec=hilvan %u
+Icon=io.github.heelxel.Hilvan
+Terminal=false
+Categories=Network;InstantMessaging;Chat;VideoConference;
+Keywords=matrix;chat;element;mensajes;videollamada;cifrado;
+MimeType=x-scheme-handler/matrix;
+StartupWMClass=io.github.heelxel.Hilvan
+StartupNotify=true

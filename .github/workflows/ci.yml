@@ -1,0 +1,37 @@
+# Comprobaciones en cada cambio: compila, pruebas, análisis y vulnerabilidades conocidas.
+name: Comprobaciones
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with: { go-version: "1.26.10" }
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends pkg-config libgtk-4-dev libwebkitgtk-6.0-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
+      - name: Formato
+        run: test -z "$(gofmt -l internal cmd assets)"
+      - name: Análisis
+        run: go vet -tags goolm,sqlite_fts5 ./...
+      - name: Pruebas
+        run: go test -tags goolm,sqlite_fts5 ./...
+      - name: Compila para Windows y macOS (sin C)
+        run: |
+          GOOS=windows CGO_ENABLED=0 go build -tags goolm,sqlite_fts5 -o /dev/null ./internal/... ./cmd/hilvan-firmar
+          GOOS=darwin CGO_ENABLED=0 go build -tags goolm,sqlite_fts5 -o /dev/null ./internal/... ./cmd/hilvan-firmar
+      - name: Interfaz
+        run: for f in web/js/*.js; do node --check "$f"; done
+      - name: Vulnerabilidades conocidas
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest -tags goolm,sqlite_fts5 ./...

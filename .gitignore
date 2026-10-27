@@ -1,0 +1,24 @@
+# Binarios y temporales de compilación
+/hilvan
+/hilvan-scim
+/result*
+*.test
+/build/
+/dist/
+/vendor/
+*.syso
+android/build/
+android/dist/
+packaging/flatpak/build/
+packaging/flatpak/repo/
+.flatpak-builder/
+
+# Claves y secretos: NUNCA al repositorio (van en ../hilvan-firma, con copia de seguridad).
+*.keystore
+*.jks
+*.p12
+*.key
+clave.txt
+firma/
+hilvan-firma/
+.env
