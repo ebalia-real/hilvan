@@ -17,6 +17,7 @@ FIRMA="${HILVAN_FIRMA:-$(cd .. && pwd)/hilvan-firma}"
 KEY="$FIRMA/actualizaciones.key"
 [ -f "$KEY" ] && [ -f "$FIRMA/hilvan.keystore" ] || { echo "Faltan las claves en $FIRMA" >&2; exit 1; }
 if command -v gh >/dev/null; then GH=(gh); else GH=(nix run nixpkgs#gh --); fi
+if command -v go >/dev/null; then GO=(go); else GO=(nix develop -c go); fi
 PUB="$(sed -n 's/^\tupdatePublicKey = "\(.*\)"$/\1/p' internal/core/update.go)"
 [ -n "$PUB" ] || { echo "No encuentro la clave pública en internal/core/update.go" >&2; exit 1; }
 git diff --quiet && git diff --cached --quiet || { echo "Hay cambios sin guardar (commit) en el repositorio." >&2; exit 1; }
@@ -42,8 +43,8 @@ D="$(mktemp -d)"
 "${GH[@]}" release download "v$V" -D "$D"
 cp "$APK" "$D/"
 (cd "$D" && sha256sum hilvan* | sort -k2 > SHA256SUMS)
-go run ./cmd/hilvan-firmar firmar "$KEY" "$D/SHA256SUMS"
-go run ./cmd/hilvan-firmar verificar "$PUB" "$D/SHA256SUMS"
+"${GO[@]}" run ./cmd/hilvan-firmar firmar "$KEY" "$D/SHA256SUMS"
+"${GO[@]}" run ./cmd/hilvan-firmar verificar "$PUB" "$D/SHA256SUMS"
 
 echo "== 4/4 Publicando"
 "${GH[@]}" release upload "v$V" "$D/$(basename "$APK")" "$D/SHA256SUMS" "$D/SHA256SUMS.sig" --clobber
