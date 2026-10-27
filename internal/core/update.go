@@ -398,13 +398,15 @@ func (m *Manager) applyUpdate(file, dir string) error {
 				m.Log.Warn().Str("salida", string(out)).Msg("apt-get no pudo instalar")
 			}
 		}
-		return exec.Command("xdg-open", file).Start()
+		return m.openInstaller(file)
 	case "flatpak":
-		out, err := exec.Command("flatpak-spawn", "--host", "flatpak", "install", "--user", "-y", "--noninteractive", "--bundle", file).CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("flatpak: %v %s", err, strings.TrimSpace(string(out)))
+		// Desde adentro del sandbox no se puede instalar (y no le damos permiso para salir de él):
+		// el paquete ya verificado queda en Descargas y se abre con el instalador del sistema.
+		dest := filepath.Join(downloadsDir(), filepath.Base(file))
+		if err := copyFile(file, dest); err != nil {
+			return err
 		}
-		return m.restartAfterUpdate("")
+		return m.openInstaller(dest)
 	case "windows", "tar":
 		exe, err := os.Executable()
 		if err != nil {
@@ -463,6 +465,17 @@ func (m *Manager) applyUpdate(file, dir string) error {
 	return errors.New("esta instalación se actualiza desde fuera de Hilvan")
 }
 
+// openInstaller abre el paquete ya verificado con el instalador del sistema, que pide permiso.
+func (m *Manager) openInstaller(path string) error {
+	if err := exec.Command("xdg-open", path).Start(); err != nil {
+		return fmt.Errorf("no se pudo abrir el instalador: %w (el paquete está en %s)", err, path)
+	}
+	m.setUpdate(func(i *UpdateInfo) {
+		i.State, i.Manual = "manual", "Se abrió el instalador del sistema con la versión nueva (ya verificada). Cuando termine, volvé a abrir Hilvan."
+	})
+	return nil
+}
+
 // restartAfterUpdate vuelve a abrir Hilvan (la versión nueva) y cierra esta.
 func (m *Manager) restartAfterUpdate(target string) error {
 	m.setUpdate(func(i *UpdateInfo) { i.State = "ready" })
@@ -472,8 +485,6 @@ func (m *Manager) restartAfterUpdate(target string) error {
 		switch {
 		case Packaging == "macos":
 			cmd = exec.Command("open", "-n", target)
-		case Packaging == "flatpak":
-			cmd = exec.Command("flatpak-spawn", "--host", "flatpak", "run", "io.github.heelxel.Hilvan")
 		case target != "":
 			cmd = exec.Command(target)
 		default:

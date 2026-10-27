@@ -62,6 +62,9 @@ type Tray struct {
 	OnMenu func(id int32)
 }
 
+// uniqueNameOnly hace que las pruebas usen el nombre único, como dentro de flatpak.
+var uniqueNameOnly bool
+
 // New publica el ícono. Si no hay bandeja todavía (por ejemplo GNOME sin la extensión
 // AppIndicator) igual queda listo y se registra solo cuando aparezca.
 func New(title string, icon image.Image, items []MenuItem) (*Tray, error) {
@@ -70,13 +73,13 @@ func New(title string, icon image.Image, items []MenuItem) (*Tray, error) {
 		return nil, err
 	}
 	t := &Tray{conn: conn, base: icon, items: items, rev: 1}
+	// El nombre de la especificación; si no se puede (flatpak no lo permite sin un permiso amplio)
+	// alcanza con el nombre único de la conexión: los vigilantes lo aceptan igual.
 	t.name = fmt.Sprintf("org.kde.StatusNotifierItem-%d-1", os.Getpid())
-	if r, err := conn.RequestName(t.name, dbus.NameFlagDoNotQueue); err != nil || r != dbus.RequestNameReplyPrimaryOwner {
-		conn.Close()
-		if err == nil {
-			err = errors.New("nombre ocupado")
-		}
-		return nil, fmt.Errorf("bandeja: %w", err)
+	if uniqueNameOnly {
+		t.name = conn.Names()[0]
+	} else if r, err := conn.RequestName(t.name, dbus.NameFlagDoNotQueue); err != nil || r != dbus.RequestNameReplyPrimaryOwner {
+		t.name = conn.Names()[0]
 	}
 
 	pix := t.pixmaps()

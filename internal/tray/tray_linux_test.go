@@ -49,6 +49,7 @@ func startWatcher(t *testing.T) (*dbus.Conn, *fakeWatcher) {
 	if r, err := conn.RequestName(watcherName, dbus.NameFlagDoNotQueue); err != nil || r != dbus.RequestNameReplyPrimaryOwner {
 		t.Fatalf("no se pudo tomar el nombre de la bandeja: %v %v", r, err)
 	}
+	t.Cleanup(func() { _, _ = conn.ReleaseName(watcherName); conn.Close() })
 	return conn, w
 }
 
@@ -86,6 +87,9 @@ func TestTrayDBus(t *testing.T) {
 	tr.OnActivate = func(tok string) { mu.Lock(); tokens = append(tokens, tok); mu.Unlock() }
 
 	waitFor(t, "registro en la bandeja", func() bool { return w.count() == 1 })
+	if uniqueNameOnly != strings.HasPrefix(w.items[0], ":") {
+		t.Fatalf("nombre registrado: %s", w.items[0])
+	}
 	if !tr.Available() {
 		t.Fatal("la bandeja figura no disponible")
 	}
@@ -227,4 +231,12 @@ func TestRenderBadge(t *testing.T) {
 	if pm.W != 22 || len(pm.Data) != 22*22*4 {
 		t.Fatalf("pixmap %dx%d %d", pm.W, pm.H, len(pm.Data))
 	}
+}
+
+// Dentro de flatpak no se puede tomar el nombre org.kde.StatusNotifierItem-…: la bandeja se
+// registra con el nombre único de la conexión y todo tiene que andar igual.
+func TestTrayDBusUniqueName(t *testing.T) {
+	uniqueNameOnly = true
+	defer func() { uniqueNameOnly = false }()
+	TestTrayDBus(t)
 }
