@@ -7,12 +7,15 @@ name: Publicar versión
 on:
   push:
     tags: [ "v*.*.*" ]
+  # A mano: compila todo como 0.0.0 para probar, sin crear ninguna versión.
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
   GO_VERSION: "1.26.10"
+  HV: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'v0.0.0' }}
 
 jobs:
   linux:
@@ -33,14 +36,14 @@ jobs:
             libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev
       - name: Compilar
         run: |
-          V="${GITHUB_REF_NAME#v}"
+          V="${HV#v}"
           for kind in tar deb; do
             CGO_ENABLED=1 go build -trimpath -tags goolm,sqlite_fts5 \
               -ldflags "-s -w -X main.version=$V -X main.packaging=$kind" -o build/$kind/hilvan ./cmd/hilvan
           done
       - name: Empaquetar .tar.gz y .deb
         run: |
-          V="${GITHUB_REF_NAME#v}"
+          V="${HV#v}"
           d=hilvan-$V-linux-${{ matrix.arch }}
           mkdir -p dist $d/icons
           cp build/tar/hilvan assets/io.github.heelxel.Hilvan.desktop packaging/linux/instalar.sh $d/
@@ -82,14 +85,14 @@ jobs:
       - name: Preparar (dependencias incluidas y versión)
         run: |
           go mod vendor
-          sed -i "s/@VERSION@/${GITHUB_REF_NAME#v}/g" packaging/flatpak/io.github.heelxel.Hilvan.yml
+          sed -i "s/@VERSION@/${HV#v}/g" packaging/flatpak/io.github.heelxel.Hilvan.yml
       - uses: flatpak/flatpak-github-actions/flatpak-builder@79327416609af08178ad73b352877e51450790b3 # v6.8
         with:
           bundle: hilvan.flatpak
           manifest-path: packaging/flatpak/io.github.heelxel.Hilvan.yml
           upload-artifact: false
       - name: Renombrar
-        run: mkdir -p dist && mv hilvan.flatpak "dist/hilvan-${GITHUB_REF_NAME#v}-x86_64.flatpak"
+        run: mkdir -p dist && mv hilvan.flatpak "dist/hilvan-${HV#v}-x86_64.flatpak"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with: { name: flatpak, path: dist/* }
 
@@ -107,11 +110,11 @@ jobs:
       - name: Ícono y manifiesto de Windows
         run: |
           go run github.com/tc-hib/go-winres@v0.3.3 simply --icon assets/icons/hilvan-256.png --manifest gui \
-            --product-name Hilvan --file-description "Hilvan" --product-version "${GITHUB_REF_NAME#v}" --file-version "${GITHUB_REF_NAME#v}" \
+            --product-name Hilvan --file-description "Hilvan" --product-version "${HV#v}" --file-version "${HV#v}" \
             --out cmd/hilvan/rsrc
       - name: Compilar
         run: |
-          V="${GITHUB_REF_NAME#v}"
+          V="${HV#v}"
           CGO_ENABLED=1 go build -trimpath -tags goolm,sqlite_fts5 \
             -ldflags "-s -w -H windowsgui -X main.version=$V -X main.packaging=windows" -o build/hilvan.exe ./cmd/hilvan
           mkdir -p dist && (cd build && zip -9 ../dist/hilvan-$V-windows-x86_64.zip hilvan.exe)
@@ -131,7 +134,7 @@ jobs:
         with: { go-version: "${{ env.GO_VERSION }}" }
       - name: Compilar y armar Hilvan.app
         run: |
-          V="${GITHUB_REF_NAME#v}"
+          V="${HV#v}"
           app=build/Hilvan.app/Contents
           mkdir -p $app/MacOS $app/Resources
           CGO_ENABLED=1 go build -trimpath -tags goolm,sqlite_fts5 \
@@ -150,6 +153,7 @@ jobs:
 
   borrador:
     needs: [ linux, flatpak, windows, macos ]
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
