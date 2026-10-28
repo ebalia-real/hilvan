@@ -60,13 +60,19 @@ public class MainActivity extends Activity {
         root.setBackgroundColor(Color.parseColor("#141519"));
         root.addView(web, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         setContentView(root);
-        root.setOnApplyWindowInsetsListener((v, insets) -> {
-            // Barras del sistema y recorte de la cámara (notch), lo que sea más alto; abajo, también el teclado.
-            android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-            int bottom = Math.max(bars.bottom, insets.getInsets(WindowInsets.Type.ime()).bottom);
-            v.setPadding(bars.left, bars.top, bars.right, bottom);
-            return WindowInsets.CONSUMED;
-        });
+        if (Build.VERSION.SDK_INT >= 30) {
+            // De borde a borde en todas las versiones (Android 15 lo impone): el espacio de las barras,
+            // el notch y el teclado lo pone este contenedor. Sin esto Android 11–14 no avisa la altura
+            // del teclado y queda tapando el chat.
+            getWindow().setDecorFitsSystemWindows(false);
+            root.setOnApplyWindowInsetsListener((v, insets) -> {
+                android.graphics.Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                int bottom = Math.max(bars.bottom, insets.getInsets(WindowInsets.Type.ime()).bottom);
+                v.setPadding(bars.left, bars.top, bars.right, bottom);
+                return WindowInsets.CONSUMED;
+            });
+        }
+        // Android 10: la ventana deja lugar a las barras y se achica sola con el teclado (adjustResize).
 
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -120,6 +126,7 @@ public class MainActivity extends Activity {
             }
         });
 
+        checkWebView();
         if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIF);
         }
@@ -134,6 +141,37 @@ public class MainActivity extends Activity {
                 handleIntent(getIntent());
             });
         }).start();
+    }
+
+    // La interfaz necesita un WebView de los últimos años (Chrome 111 o más nuevo). Los teléfonos con
+    // Play Store lo actualizan solos; si quedó uno de fábrica, se avisa en vez de mostrar una pantalla en blanco.
+    static final int MIN_WEBVIEW = 111;
+
+    private void checkWebView() {
+        android.content.pm.PackageInfo p = WebView.getCurrentWebViewPackage();
+        if (p == null || p.versionName == null) return;
+        int major;
+        try {
+            major = Integer.parseInt(p.versionName.split("\\.")[0]);
+        } catch (Exception ignored) {
+            return;
+        }
+        if (major >= MIN_WEBVIEW) return;
+        // El de fábrica (AOSP) no está en Play Store: se ofrece el de Google.
+        String pkg = "com.android.webview".equals(p.packageName) ? "com.google.android.webview" : p.packageName;
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("Hay que actualizar el WebView")
+                .setMessage("Hilvan usa el componente \"Android System WebView\" del teléfono y el tuyo es muy viejo (versión "
+                        + major + "). Actualizalo desde Play Store (o el Chrome del teléfono) y volvé a abrir Hilvan.")
+                .setPositiveButton("Actualizar", (d, w) -> {
+                    try {
+                        startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=" + pkg)));
+                    } catch (Exception e) {
+                        Files.openUrl(this, "https://play.google.com/store/apps/details?id=" + pkg);
+                    }
+                })
+                .setNegativeButton("Cerrar", null)
+                .show();
     }
 
     @Override

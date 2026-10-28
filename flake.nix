@@ -60,8 +60,9 @@
               includeSystemImages = false;
               includeSources = false;
             };
+            # Android 10 y 11 para probar los extremos (el teclado y las barras cambian en 11).
             testing = apkgs.androidenv.composeAndroidPackages {
-              platformVersions = [ "35" ];
+              platformVersions = [ "29" "30" "35" ];
               includeEmulator = true;
               includeSystemImages = true;
               systemImageTypes = [ "default" ];

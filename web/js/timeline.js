@@ -92,6 +92,8 @@ export function Timeline({ a, room, summary }) {
     if (!inner) return;
     const ro = new ResizeObserver(() => restore());
     ro.observe(inner);
+    // También cuando se achica la zona visible (el teclado del teléfono): sigue viéndose lo último.
+    if (scRef.current) ro.observe(scRef.current);
     return () => ro.disconnect();
   }, [key]);
 
