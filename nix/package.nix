@@ -24,7 +24,7 @@ buildGo {
   inherit version;
   inherit src;
 
-  vendorHash = "sha256-3NyR3f2Jwuho/D+sUwJ55lYA57CNKlQS1MIWGxfGyeU=";
+  vendorHash = "sha256-cgWV8APfaoklq69hgkaiEsEc/Mn60SzHZRrM5+bN5/Y=";
 
   subPackages = [ "cmd/hilvan" ];
   tags = [ "goolm" "sqlite_fts5" ];
