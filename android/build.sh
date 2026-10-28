@@ -44,7 +44,7 @@ PY
 DEBUG_FLAG=""; [ "${HILVAN_DEBUG:-}" = 1 ] && DEBUG_FLAG="--debug-mode"
 "$BT/aapt2" link -o "$OUT/base.apk" -I "$JAR" --manifest "$OUT/AndroidManifest.xml" $DEBUG_FLAG \
   --java "$OUT/gen" --min-sdk-version 29 --target-sdk-version 35 \
-  --version-name "$VERSION" --version-code "$VCODE" "$OUT/res/res.zip" "$OUT/res/iconos.zip"
+  --version-name "$VERSION" --version-code "$VCODE" --replace-version "$OUT/res/res.zip" "$OUT/res/iconos.zip"
 
 echo "3/5 Java"
 javac -nowarn --release 17 -classpath "$JAR" -d "$OUT/classes" \
